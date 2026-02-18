@@ -1,278 +1,300 @@
-import React, { useState, useCallback, useMemo } from 'react';
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026-2030 가드닝 일정 플래너</title>
+    <!-- 라이브러리 로드: React, Tailwind CSS, Babel -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;900&display=swap');
+        body { font-family: 'Pretendard', sans-serif; -webkit-font-smoothing: antialiased; }
+        .glass-inner { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); }
+    </style>
+</head>
+<body class="bg-stone-50 text-slate-900 selection:bg-emerald-100">
+    <div id="root"></div>
 
-/**
- * 2026년 ~ 2030년 대한민국 법정 공휴일 데이터베이스
- * 사용자가 제공한 korea_holidays_2027_2030.md 기반
- */
-const HOLIDAY_DATABASE = {
-  2026: { 0: [1], 1: [16, 17, 18], 2: [1, 2], 4: [5, 24, 25], 5: [6], 7: [15, 17], 8: [24, 25, 26, 28], 9: [3, 5, 9], 11: [25] },
-  2027: { 0: [1], 1: [6, 7, 8, 9], 2: [1], 4: [5, 13], 5: [6, 7], 7: [15, 16], 8: [14, 15, 16], 9: [3, 4, 9, 11], 11: [25] },
-  2028: { 0: [1, 26, 27, 28], 2: [1], 4: [2, 5], 5: [6], 7: [15], 9: [2, 3, 4, 5, 9], 11: [25] },
-  2029: { 0: [1], 1: [12, 13, 14], 2: [1], 4: [5, 7, 20, 21], 5: [6], 7: [15], 8: [21, 22, 23, 24], 9: [3, 9], 11: [25] },
-  2030: { 0: [1], 1: [2, 3, 4, 5], 2: [1], 4: [5, 6, 9], 5: [6], 7: [15], 8: [11, 12, 13], 9: [3, 9], 11: [25] }
-};
+    <script type="text/babel">
+        const { useState, useCallback, useMemo } = React;
 
-const Icon = ({ name, size = 20, className = "" }) => {
-  const icons = {
-    trees: "m12 19 3-7 3 7h-6Z M9 19 12 12 15 19H9Z M6 19 9 12 12 19H6Z",
-    calendar: "M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z",
-    rain: "M8 19c-2.8 0-5-2.2-5-5s2.2-5 5-5c.4 0 .9.1 1.3.2A6 6 0 0 1 20 12c0 3.3-2.7 6-6 6h-6z M10 21v2 M14 21v2",
-    info: "M12 16v-4M12 8h.01M22 12c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2s10 4.477 10 10z",
-    chevron: "m9 18 6-6-6-6",
-    external: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"
-  };
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d={icons[name] || ""} />
-      {name === 'trees' && <path d="M12 19v3" />}
-    </svg>
-  );
-};
+        /**
+         * 2026년 ~ 2030년 대한민국 법정 공휴일 데이터베이스
+         */
+        const HOLIDAY_DATABASE = {
+          2026: { 0: [1], 1: [16, 17, 18], 2: [1, 2], 4: [5, 24, 25], 5: [6], 7: [15, 17], 8: [24, 25, 26, 28], 9: [3, 5, 9], 11: [25] },
+          2027: { 0: [1], 1: [6, 7, 8, 9], 2: [1], 4: [5, 13], 5: [6, 7], 7: [15, 16], 8: [14, 15, 16], 9: [3, 4, 9, 11], 11: [25] },
+          2028: { 0: [1, 26, 27, 28], 2: [1], 4: [2, 5], 5: [6], 7: [15], 9: [2, 3, 4, 5, 9], 11: [25] },
+          2029: { 0: [1], 1: [12, 13, 14], 2: [1], 4: [5, 7, 20, 21], 5: [6], 7: [15], 8: [21, 22, 23, 24], 9: [3, 9], 11: [25] },
+          2030: { 0: [1], 1: [2, 3, 4, 5], 2: [1], 4: [5, 6, 9], 5: [6], 7: [15], 8: [11, 12, 13], 9: [3, 9], 11: [25] }
+        };
 
-export default function App() {
-  const [viewDate, setViewDate] = useState(new Date(2026, 2, 1)); // 2026년 3월 기본
-  const [rainyInput, setRainyInput] = useState("");
-  const [personalExclusions, setPersonalExclusions] = useState("");
-  const [schedule, setSchedule] = useState(null);
-  const [error, setError] = useState(null);
+        const Icon = ({ name, size = 20, className = "" }) => {
+          const icons = {
+            trees: "m12 19 3-7 3 7h-6Z M9 19 12 12 15 19H9Z M6 19 9 12 12 19H6Z",
+            calendar: "M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z",
+            rain: "M8 19c-2.8 0-5-2.2-5-5s2.2-5 5-5c.4 0 .9.1 1.3.2A6 6 0 0 1 20 12c0 3.3-2.7 6-6 6h-6z M10 21v2 M14 21v2",
+            info: "M12 16v-4M12 8h.01M22 12c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2s10 4.477 10 10z",
+            chevron: "m9 18 6-6-6-6"
+          };
+          return (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+              <path d={icons[name] || ""} />
+              {name === 'trees' && <path d="M12 19v3" />}
+            </svg>
+          );
+        };
 
-  const currentYear = viewDate.getFullYear();
-  const monthIndex = viewDate.getMonth();
-  const monthNames = ["1월 (Jan)", "2월 (Feb)", "3월 (Mar)", "4월 (Apr)", "5월 (May)", "6월 (Jun)", "7월 (Jul)", "8월 (Aug)", "9월 (Sep)", "10월 (Oct)", "11월 (Nov)", "12월 (Dec)"];
+        function App() {
+          const [viewDate, setViewDate] = useState(new Date(2026, 2, 1)); 
+          const [rainyInput, setRainyInput] = useState("");
+          const [personalExclusions, setPersonalExclusions] = useState("");
+          const [schedule, setSchedule] = useState(null);
+          const [error, setError] = useState(null);
 
-  const currentMonthHolidays = useMemo(() => {
-    return HOLIDAY_DATABASE[currentYear]?.[monthIndex] || [];
-  }, [currentYear, monthIndex]);
+          const currentYear = viewDate.getFullYear();
+          const monthIndex = viewDate.getMonth();
+          const monthNames = ["1월 (Jan)", "2월 (Feb)", "3월 (Mar)", "4월 (Apr)", "5월 (May)", "6월 (Jun)", "7월 (Jul)", "8월 (Aug)", "9월 (Sep)", "10월 (Oct)", "11월 (Nov)", "12월 (Dec)"];
 
-  const getDayOfWeek = (day) => {
-    const days = ['일', '월', '화', '수', '목', '금', '토'];
-    const d = new Date(currentYear, monthIndex, day);
-    return days[d.getDay()];
-  };
+          const currentMonthHolidays = useMemo(() => {
+            return HOLIDAY_DATABASE[currentYear]?.[monthIndex] || [];
+          }, [currentYear, monthIndex]);
 
-  const generateSchedule = useCallback(() => {
-    try {
-      setError(null);
-      const year = currentYear;
-      const month = monthIndex;
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      
-      const parseDays = (str) => str.split(/[,.\s]+/).map(d => parseInt(d.trim())).filter(d => !isNaN(d) && d >= 1 && d <= 31);
-      
-      const rainSet = new Set(parseDays(rainyInput));
-      const holidaySet = new Set(currentMonthHolidays);
-      const personalSet = new Set(parseDays(personalExclusions));
+          const getDayOfWeek = (day) => {
+            const days = ['일', '월', '화', '수', '목', '금', '토'];
+            const d = new Date(currentYear, monthIndex, day);
+            return days[d.getDay()];
+          };
 
-      const availableDays = [];
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dObj = new Date(year, month, d);
-        const dayOfWeek = dObj.getDay(); 
-        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-        
-        if (!isWeekend && !rainSet.has(d) && !holidaySet.has(d) && !personalSet.has(d)) {
-          availableDays.push(d);
-        }
-      }
+          const generateSchedule = useCallback(() => {
+            try {
+              setError(null);
+              const year = currentYear;
+              const month = monthIndex;
+              const daysInMonth = new Date(year, month + 1, 0).getDate();
+              
+              const parseDays = (str) => str.split(/[,.\s]+/).map(d => parseInt(d.trim())).filter(d => !isNaN(d) && d >= 1 && d <= 31);
+              
+              const rainSet = new Set(parseDays(rainyInput));
+              const holidaySet = new Set(currentMonthHolidays);
+              const personalSet = new Set(parseDays(personalExclusions));
 
-      if (availableDays.length < 4) {
-        setError("방문 가능한 평일이 부족합니다. 제외 날짜를 줄여주세요.");
-        return;
-      }
+              const availableDays = [];
+              for (let d = 1; d <= daysInMonth; d++) {
+                const dObj = new Date(year, month, d);
+                const dayOfWeek = dObj.getDay(); 
+                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                
+                if (!isWeekend && !rainSet.has(d) && !holidaySet.has(d) && !personalSet.has(d)) {
+                  availableDays.push(d);
+                }
+              }
 
-      const clients = [
-        { id: 'austria', name: '오스트리아', desc: 'Austria Care', count: 2 },
-        { id: 'sweden', name: '스웨덴', desc: 'Sweden Care', count: 2 },
-        { id: 'norway', name: '노르웨이', desc: 'Norway Care', count: (month + 1 >= 3 && month + 1 <= 11) ? 2 : 0 }
-      ];
+              if (availableDays.length < 4) {
+                setError("방문 가능한 평일이 부족합니다. 제외 날짜를 줄여주세요.");
+                return;
+              }
 
-      const result = {};
-      clients.forEach(client => {
-        if (client.count === 0) {
-          result[client.id] = [];
-          return;
-        }
+              const clients = [
+                { id: 'austria', name: '오스트리아', desc: 'Austria Care Program', count: 2 },
+                { id: 'sweden', name: '스웨덴', desc: 'Sweden Care Program', count: 2 },
+                { id: 'norway', name: '노르웨이', desc: 'Norway Care Program', count: (month + 1 >= 3 && month + 1 <= 11) ? 2 : 0 }
+              ];
 
-        const picked = [];
-        const firstHalfOptions = availableDays.filter(d => d <= 15);
-        const first = firstHalfOptions.length > 0 ? firstHalfOptions[Math.floor(Math.random() * firstHalfOptions.length)] : availableDays[0];
-        picked.push(first);
-        
-        const secondHalfOptions = availableDays.filter(d => d >= first + 7 && d <= first + 21);
-        if (secondHalfOptions.length > 0) {
-          picked.push(secondHalfOptions[Math.floor(Math.random() * secondHalfOptions.length)]);
-        } else {
-          const fallback = availableDays.filter(d => d > first);
-          if (fallback.length > 0) picked.push(fallback[0]);
-        }
-        result[client.id] = picked.sort((a, b) => a - b);
-      });
+              const result = {};
+              clients.forEach(client => {
+                if (client.count === 0) {
+                  result[client.id] = [];
+                  return;
+                }
 
-      setSchedule(result);
-    } catch (e) {
-      setError("일정 계산 중 오류가 발생했습니다.");
-    }
-  }, [currentYear, monthIndex, rainyInput, personalExclusions, currentMonthHolidays]);
+                const picked = [];
+                const firstHalfOptions = availableDays.filter(d => d <= 15);
+                const first = firstHalfOptions.length > 0 ? firstHalfOptions[Math.floor(Math.random() * firstHalfOptions.length)] : availableDays[0];
+                picked.push(first);
+                
+                const secondHalfOptions = availableDays.filter(d => d >= first + 7 && d <= first + 21);
+                if (secondHalfOptions.length > 0) {
+                  picked.push(secondHalfOptions[Math.floor(Math.random() * secondHalfOptions.length)]);
+                } else {
+                  const fallback = availableDays.filter(d => d > first);
+                  if (fallback.length > 0) picked.push(fallback[0]);
+                }
+                result[client.id] = picked.sort((a, b) => a - b);
+              });
 
-  const changeMonth = (offset) => {
-    const newDate = new Date(viewDate);
-    newDate.setMonth(newDate.getMonth() + offset);
-    setViewDate(newDate);
-    setSchedule(null);
-  };
+              setSchedule(result);
+            } catch (e) {
+              setError("일정 계산 중 오류가 발생했습니다.");
+            }
+          }, [currentYear, monthIndex, rainyInput, personalExclusions, currentMonthHolidays]);
 
-  return (
-    <div className="min-h-screen p-4 md:p-8 flex flex-col items-center bg-stone-50 text-slate-900 font-sans selection:bg-emerald-100">
-      <div className="max-w-4xl w-full bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-stone-200">
-        
-        {/* Header */}
-        <div className="bg-emerald-900 p-8 md:p-12 text-white relative border-b-8 border-emerald-500">
-          <div className="absolute top-0 right-0 p-10 opacity-10 pointer-events-none">
-            <Icon name="trees" size={160} />
-          </div>
-          <div className="relative z-10 flex items-center gap-6">
-            <div className="bg-emerald-500 p-4 rounded-3xl shadow-xl shadow-emerald-500/20">
-              <Icon name="calendar" size={36} className="text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl md:text-4xl font-black tracking-tight leading-none uppercase italic">Gardening Planner</h1>
-              <p className="text-emerald-400 font-bold text-xs md:text-sm tracking-[0.3em] mt-2 uppercase">2026-2030 Global Scheduler</p>
-            </div>
-          </div>
-        </div>
+          const changeMonth = (offset) => {
+            const newDate = new Date(viewDate);
+            newDate.setMonth(newDate.getMonth() + offset);
+            setViewDate(newDate);
+            setSchedule(null);
+          };
 
-        {/* Control Section */}
-        <div className="p-6 md:p-10 space-y-8 bg-white">
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            {/* Year/Month Selector */}
-            <div className="flex-1 flex items-center justify-between bg-stone-100 p-2 rounded-2xl border border-stone-200 shadow-inner w-full">
-              <button onClick={() => changeMonth(-1)} className="p-4 hover:bg-white rounded-xl transition-all font-black text-stone-400 hover:text-emerald-600 active:scale-90">
-                <Icon name="chevron" className="rotate-180" size={24} />
-              </button>
-              <div className="flex flex-col items-center">
-                <span className="text-2xl md:text-3xl font-black tabular-nums tracking-tighter text-slate-800">
-                  {currentYear}년 {monthNames[monthIndex]}
-                </span>
-              </div>
-              <button onClick={() => changeMonth(1)} className="p-4 hover:bg-white rounded-xl transition-all font-black text-stone-400 hover:text-emerald-600 active:scale-90">
-                <Icon name="chevron" size={24} />
-              </button>
-            </div>
-            
-            <a 
-              href={`https://www.accuweather.com/ko/kr/seongbuk-dong/226016/month-weather/226016?year=${currentYear}&month=${monthIndex + 1}`}
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-3 py-6 px-8 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black transition-all shadow-lg active:scale-95 group w-full"
-            >
-              <Icon name="rain" size={20} className="group-hover:rotate-12 transition-transform" />
-              성북동 날씨 확인
-            </a>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <label className="text-[17px] font-black text-slate-600 ml-2 uppercase tracking-widest flex items-center gap-2">
-                <Icon name="rain" size={18} className="text-blue-500" /> Rain (우천 날짜 입력)
-              </label>
-              <input 
-                type="text" 
-                value={rainyInput} 
-                onChange={e => setRainyInput(e.target.value)} 
-                placeholder="예: 5, 12, 13" 
-                className="w-full p-5 rounded-2xl border-2 border-stone-100 focus:border-emerald-500 outline-none transition-all bg-stone-50 font-bold placeholder:text-zinc-300 shadow-inner text-lg"
-              />
-            </div>
-            <div className="space-y-3">
-              <label className="text-[17px] font-black text-slate-600 ml-2 uppercase tracking-widest flex items-center gap-2">
-                <Icon name="info" size={18} className="text-amber-500" /> Personal (개인 일정 등)
-              </label>
-              <input 
-                type="text" 
-                value={personalExclusions} 
-                onChange={e => setPersonalExclusions(e.target.value)} 
-                placeholder="예: 3, 20" 
-                className="w-full p-5 rounded-2xl border-2 border-stone-100 focus:border-emerald-500 outline-none transition-all bg-stone-50 font-bold placeholder:text-zinc-300 shadow-inner text-lg"
-              />
-            </div>
-          </div>
-
-          <button 
-            onClick={generateSchedule}
-            className="w-full py-7 bg-slate-900 hover:bg-black text-white rounded-3xl font-black text-xl transition-all shadow-2xl active:scale-[0.98] flex items-center justify-center gap-4 border-b-4 border-slate-700"
-          >
-            방문 일정 최적화 시작
-          </button>
-
-          {error && (
-            <div className="p-5 bg-rose-50 text-rose-600 rounded-2xl border border-rose-100 font-bold text-sm flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
-              <Icon name="info" size={20} /> {error}
-            </div>
-          )}
-        </div>
-
-        {/* Results Area */}
-        <div className="p-6 md:p-10 bg-stone-50 border-t border-stone-200 min-h-[400px]">
-          {/* Holiday Notice: 폰트 크기 대폭 확대 */}
-          {currentMonthHolidays.length > 0 ? (
-            <div className="mb-8 p-6 bg-rose-50/50 rounded-3xl border-2 border-rose-100 flex items-center gap-5">
-              <div className="text-rose-500 bg-white p-2 rounded-lg shadow-sm"><Icon name="calendar" size={28} /></div>
-              <p className="text-[17px] md:text-[20px] font-black text-rose-800 uppercase tracking-tight leading-tight">
-                {currentYear}년 {monthIndex + 1}월 내장 공휴일(자동제외): <span className="underline decoration-2 underline-offset-4 decoration-rose-300">{currentMonthHolidays.join(', ')}일</span>
-              </p>
-            </div>
-          ) : (
-            <div className="mb-8 p-5 bg-slate-100/50 rounded-2xl border border-slate-200 text-slate-500 text-[16px] font-bold text-center italic tracking-wide">
-              {currentYear}년 {monthIndex + 1}월은 내장된 법정 공휴일 정보가 없습니다.
-            </div>
-          )}
-
-          {!schedule ? (
-            <div className="text-center py-24 opacity-10 flex flex-col items-center">
-              <Icon name="trees" size={100} className="mb-6" />
-              <p className="text-3xl md:text-5xl font-black tracking-widest uppercase italic leading-none">System Standby</p>
-              <p className="text-sm font-bold mt-6 uppercase tracking-[0.4em]">Optimizing for Professional Care</p>
-            </div>
-          ) : (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
-              {[
-                { id: 'austria', name: '오스트리아', desc: 'Austria Care Program', color: 'bg-rose-50 text-rose-800 border-rose-200 shadow-rose-900/5' },
-                { id: 'sweden', name: '스웨덴', desc: 'Sweden Care Program', color: 'bg-amber-50 text-amber-800 border-amber-200 shadow-amber-900/5' },
-                { id: 'norway', name: '노르웨이', desc: 'Norway Care Program', color: 'bg-sky-50 text-sky-800 border-sky-200 shadow-sky-900/5' }
-              ].map(c => (
-                <div key={c.id} className={`p-8 rounded-[3.5rem] border-2 ${c.color} flex flex-col md:flex-row md:items-center justify-between gap-10 transition-all hover:translate-y-[-4px] hover:shadow-2xl shadow-xl group`}>
-                  <div className="flex items-center gap-6">
-                    <div className="bg-white/80 p-5 rounded-[1.75rem] shadow-sm group-hover:scale-110 transition-transform"><Icon name="trees" size={32} /></div>
+          return (
+            <div className="min-h-screen p-4 md:p-8 flex flex-col items-center bg-stone-50">
+              <div className="max-w-4xl w-full bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl overflow-hidden border border-stone-200">
+                
+                {/* Header */}
+                <div className="bg-emerald-900 p-8 md:p-12 text-white relative border-b-8 border-emerald-500">
+                  <div className="absolute top-0 right-0 p-10 opacity-10 pointer-events-none">
+                    <Icon name="trees" size={160} />
+                  </div>
+                  <div className="relative z-10 flex items-center gap-6">
+                    <div className="bg-emerald-500 p-4 rounded-3xl shadow-xl shadow-emerald-500/20">
+                      <Icon name="calendar" size={36} className="text-white" />
+                    </div>
                     <div>
-                      <h3 className="text-3xl md:text-4xl font-black tracking-tighter leading-none">{c.name}</h3>
-                      <p className="text-[11px] font-black uppercase opacity-40 tracking-[0.3em] mt-2 italic">{c.desc}</p>
+                      <h1 className="text-2xl md:text-4xl font-black tracking-tight leading-none uppercase italic">Gardening Planner</h1>
+                      <p className="text-emerald-400 font-bold text-xs md:text-sm tracking-[0.3em] mt-2 uppercase">2026-2030 Global Scheduler</p>
                     </div>
                   </div>
-                  <div className="flex gap-4">
-                    {c.id === 'norway' && (monthIndex + 1 < 3 || monthIndex + 1 > 11) ? (
-                      <span className="text-slate-400 font-black italic bg-white/40 px-12 py-8 rounded-[2.5rem] border-2 border-dashed border-zinc-200 text-sm md:text-lg uppercase tracking-widest">Winter Break</span>
-                    ) : schedule[c.id].length > 0 ? schedule[c.id].map((day, i) => (
-                      <div key={i} className="bg-white px-8 py-6 rounded-[2.5rem] shadow-xl flex flex-col items-center border border-inherit border-opacity-30 min-w-[140px] md:min-w-[180px]">
-                        <span className="text-[11px] opacity-20 mb-2 font-black uppercase tracking-[0.2em]">{i + 1}회차 방문</span>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-5xl md:text-7xl font-black tabular-nums">{day}</span>
-                          <span className="text-2xl md:text-3xl font-bold opacity-60">({getDayOfWeek(day)})</span>
-                        </div>
-                      </div>
-                    )) : (
-                      <span className="text-slate-400 font-black italic bg-white/40 px-12 py-8 rounded-[2.5rem] border-2 border-dashed border-zinc-200 text-sm uppercase">일정 수립 불가</span>
-                    )}
-                  </div>
                 </div>
-              ))}
+
+                {/* Control Section */}
+                <div className="p-6 md:p-10 space-y-8 bg-white">
+                  <div className="flex flex-col md:flex-row items-center gap-6">
+                    <div className="flex-1 flex items-center justify-between bg-stone-100 p-2 rounded-2xl border border-stone-200 shadow-inner w-full">
+                      <button onClick={() => changeMonth(-1)} className="p-4 hover:bg-white rounded-xl transition-all font-black text-stone-400 hover:text-emerald-600 active:scale-90">
+                        <Icon name="chevron" className="rotate-180" size={24} />
+                      </button>
+                      <div className="flex flex-col items-center">
+                        <span className="text-2xl md:text-3xl font-black tabular-nums tracking-tighter text-slate-800">
+                          {currentYear}년 {monthNames[monthIndex]}
+                        </span>
+                      </div>
+                      <button onClick={() => changeMonth(1)} className="p-4 hover:bg-white rounded-xl transition-all font-black text-stone-400 hover:text-emerald-600 active:scale-90">
+                        <Icon name="chevron" size={24} />
+                      </button>
+                    </div>
+                    
+                    <a 
+                      href={`https://www.accuweather.com/ko/kr/seongbuk-dong/226016/month-weather/226016?year=${currentYear}&month=${monthIndex + 1}`}
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex-1 flex items-center justify-center gap-3 py-6 px-8 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black transition-all shadow-lg active:scale-95 group w-full"
+                    >
+                      <Icon name="rain" size={20} className="group-hover:rotate-12 transition-transform" />
+                      성북동 날씨 확인
+                    </a>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <label className="text-[17px] font-black text-slate-600 ml-2 uppercase tracking-widest flex items-center gap-2">
+                        <Icon name="rain" size={18} className="text-blue-500" /> Rain (우천 날짜 입력)
+                      </label>
+                      <input 
+                        type="text" 
+                        value={rainyInput} 
+                        onChange={e => setRainyInput(e.target.value)} 
+                        placeholder="예: 5, 12, 13" 
+                        className="w-full p-5 rounded-2xl border-2 border-stone-100 focus:border-emerald-500 outline-none transition-all bg-stone-50 font-bold placeholder:text-zinc-300 shadow-inner text-lg"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <label className="text-[17px] font-black text-slate-600 ml-2 uppercase tracking-widest flex items-center gap-2">
+                        <Icon name="info" size={18} className="text-amber-500" /> Personal (개인 일정 등)
+                      </label>
+                      <input 
+                        type="text" 
+                        value={personalExclusions} 
+                        onChange={e => setPersonalExclusions(e.target.value)} 
+                        placeholder="예: 3, 20" 
+                        className="w-full p-5 rounded-2xl border-2 border-stone-100 focus:border-emerald-500 outline-none transition-all bg-stone-50 font-bold placeholder:text-zinc-300 shadow-inner text-lg"
+                      />
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={generateSchedule}
+                    className="w-full py-7 bg-slate-900 hover:bg-black text-white rounded-3xl font-black text-xl transition-all shadow-2xl active:scale-[0.98] flex items-center justify-center gap-4 border-b-4 border-slate-700"
+                  >
+                    방문 일정 최적화 시작
+                  </button>
+
+                  {error && (
+                    <div className="p-5 bg-rose-50 text-rose-600 rounded-2xl border border-rose-100 font-bold text-sm flex items-center gap-3">
+                      <Icon name="info" size={20} /> {error}
+                    </div>
+                  )}
+                </div>
+
+                {/* Results Area */}
+                <div className="p-6 md:p-10 bg-stone-50 border-t border-stone-200 min-h-[400px]">
+                  {currentMonthHolidays.length > 0 ? (
+                    <div className="mb-8 p-6 bg-rose-50/50 rounded-3xl border-2 border-rose-100 flex items-center gap-5">
+                      <div className="text-rose-500 bg-white p-2 rounded-lg shadow-sm"><Icon name="calendar" size={28} /></div>
+                      <p className="text-[17px] md:text-[20px] font-black text-rose-800 uppercase tracking-tight leading-tight">
+                        {currentYear}년 {monthIndex + 1}월 내장 공휴일(자동제외): <span className="underline decoration-2 underline-offset-4 decoration-rose-300">{currentMonthHolidays.join(', ')}일</span>
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mb-8 p-5 bg-slate-100/50 rounded-2xl border border-slate-200 text-slate-500 text-[16px] font-bold text-center italic tracking-wide">
+                      {currentYear}년 {monthIndex + 1}월은 내장된 법정 공휴일 정보가 없습니다.
+                    </div>
+                  )}
+
+                  {!schedule ? (
+                    <div className="text-center py-24 opacity-10 flex flex-col items-center">
+                      <Icon name="trees" size={100} className="mb-6" />
+                      <p className="text-3xl md:text-5xl font-black tracking-widest uppercase italic leading-none">System Standby</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {[
+                        { id: 'austria', name: '오스트리아', desc: 'Austria Care Program', color: 'bg-rose-50 text-rose-800 border-rose-200 shadow-rose-900/5' },
+                        { id: 'sweden', name: '스웨덴', desc: 'Sweden Care Program', color: 'bg-amber-50 text-amber-800 border-amber-200 shadow-amber-900/5' },
+                        { id: 'norway', name: '노르웨이', desc: 'Norway Care Program', color: 'bg-sky-50 text-sky-800 border-sky-200 shadow-sky-900/5' }
+                      ].map(c => (
+                        <div key={c.id} className={`p-6 md:p-8 rounded-[2.5rem] border-2 ${c.color} flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-10 shadow-md`}>
+                          <div className="flex items-center gap-4">
+                            <div className="bg-white/80 p-3 md:p-5 rounded-[1.25rem] md:rounded-[1.75rem] shadow-sm"><Icon name="trees" size={24} /></div>
+                            <div>
+                              <h3 className="text-2xl md:text-4xl font-black tracking-tighter leading-none">{c.name}</h3>
+                              <p className="text-[10px] font-black uppercase opacity-40 tracking-[0.3em] mt-1 md:mt-2 italic">{c.desc}</p>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-2 md:gap-4">
+                            {c.id === 'norway' && (monthIndex + 1 < 3 || monthIndex + 1 > 11) ? (
+                              <span className="text-slate-400 font-black italic bg-white/40 px-6 py-4 rounded-2xl border-2 border-dashed border-zinc-200 text-[10px] md:text-sm uppercase tracking-widest">Winter Break (No Visit)</span>
+                            ) : schedule[c.id].length > 0 ? schedule[c.id].map((day, i) => (
+                              <div key={i} className="bg-white px-4 py-3 md:px-8 md:py-6 rounded-[1.5rem] md:rounded-[2.5rem] shadow-xl flex flex-col items-center border border-inherit border-opacity-30 min-w-[100px] md:min-w-[180px]">
+                                <span className="text-[9px] md:text-[11px] opacity-20 mb-1 font-black uppercase tracking-[0.2em]">{i + 1}회차 방문</span>
+                                <div className="flex items-baseline gap-1 md:gap-2">
+                                  <span className="text-3xl md:text-7xl font-black tabular-nums">{day}</span>
+                                  <span className="text-lg md:text-3xl font-bold opacity-60">({getDayOfWeek(day)})</span>
+                                </div>
+                              </div>
+                            )) : (
+                              <span className="text-slate-400 font-black italic bg-white/40 px-6 py-4 rounded-2xl text-[10px] md:text-sm uppercase">일정 수립 불가</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <footer className="mt-12 text-slate-400 text-[10px] font-black tracking-[0.6em] uppercase opacity-50 text-center leading-loose">
+                Gardening Management Smart Platform<br/>
+                Internal Calendar 2026-2030 Synced • Mobile Optimized
+              </footer>
             </div>
-          )}
-        </div>
-      </div>
-      
-      <footer className="mt-12 text-slate-400 text-[10px] font-black tracking-[0.6em] uppercase opacity-50 text-center leading-loose">
-        Gardening Management Smart Platform<br/>
-        Internal Calendar 2026-2030 Synced • Optimized for Mobility
-      </footer>
-    </div>
-  );
-}
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
